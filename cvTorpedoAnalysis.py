@@ -9,7 +9,7 @@ import os
 from FeatureDetection import ImageFeatureProcessing
 
 class TorpedoAnalysis:
-    def __init__(self, video_fn, y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params, param_str=""):
+    def __init__(self, video_fn, y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params, viz, x_offset, param_str=""):
         self.video_fn = video_fn
         self.vidcap = cv.VideoCapture(self.video_fn)
         self.total_frames = self.vidcap.get(7)
@@ -19,9 +19,11 @@ class TorpedoAnalysis:
 
         self.y_coord = y_coord
         self.x_spacing = x_spacing
+        self.x_offset = x_offset
         self.clahe = cv.createCLAHE(clipLimit=2, tileGridSize=(8,8))
 
         self.frames_to_hop = frames_to_hop
+        self.viz = viz
         if self.vidcap.isOpened():
             self.ret, self.frame = self.vidcap.read()
         self.feature_detection = ImageFeatureProcessing(self.frame.shape)
@@ -52,18 +54,18 @@ class TorpedoAnalysis:
 
         if set_in_middle:
             for i in range(self.num_of_lines // 2 + 1):
-                cv.line(img,(i * spacing + img.shape[1] // 2, 0),(i * spacing + img.shape[1] // 2, img.shape[0]),(0,255,0), 3)
-                cv.line(img,(img.shape[1] // 2 - i * spacing, 0),(img.shape[1] // 2 - i * spacing, img.shape[0]),(0,255,0), 3)
-        
-        #Deprecated
-        else:
-            for i in range(self.num_of_lines):
-                cv.line(img,(i * spacing, 0),(i * spacing, img.shape[0]),(0,255,0), 3)
+                if i < 1:
+                    color = (255, 255, 255)
+                else:
+                    color = (0, 255, 0)
+
+                cv.line(img,(i * spacing + img.shape[1] // 2 + self.x_offset, 0),(i * spacing + img.shape[1] // 2 + self.x_offset, img.shape[0]),color, 3)
+                cv.line(img,(img.shape[1] // 2 - i * spacing + self.x_offset, 0),(img.shape[1] // 2 - i * spacing + self.x_offset, img.shape[0]),color, 3)
 
     def poi(self, img, det_x):
         self.num_of_lines = img.shape[1] // self.x_spacing
         self.middle_line = self.num_of_lines / 2
-        self.middle_px = img.shape[1] // 2
+        self.middle_px = img.shape[1] // 2 + self.x_offset
 
         offset = (det_x - self.middle_px)
         self.point_offset = round((offset / self.x_spacing), 2)
@@ -159,24 +161,29 @@ class TorpedoAnalysis:
             #     pass
             
             #================================> End of processing (Just vizualization) 
-            # self.draw_hor_line(orig_frame, self.y_coord)
-            # self.draw_vert_lines(orig_frame, self.x_spacing)
-            # cv.imshow('frame', orig_frame)            
-            # cv_wk = cv.waitKey(1)
-            # if cv_wk == ord('q'):
-            #     print("Exiting...")
-            #     break
-            # elif cv_wk == ord('p'):
-            #     cv.waitKey(-1)
+            if self.viz:
+                self.draw_hor_line(orig_frame, self.y_coord)
+                self.draw_vert_lines(orig_frame, self.x_spacing)
+                cv.imshow('frame', orig_frame)            
+                cv_wk = cv.waitKey(1)
+                if cv_wk == ord('q'):
+                    print("Exiting...")
+                    break
+                elif cv_wk == ord('p'):
+                    cv.waitKey(-1)
+
+
         self.__del__()
 
 if __name__ == "__main__":
     # Scale params
     y_coord = 315
-    x_spacing = 70
+    x_spacing = 84
+    x_offset = 35
 
     # Video params
-    frames_to_hop = 60
+    frames_to_hop = 3
+    viz = True
 
     # Detection params
     hsv_params = (0, 200, 200, 255, 120, 255)
@@ -192,13 +199,13 @@ if __name__ == "__main__":
                 f"BGR filter params: {bgr_params}\n"
 
     # # example run
-    # ta = TorpedoAnalysis("videos/RUN006.MP4", y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params, param_str=param_str)
-    # ta.run()
+    ta = TorpedoAnalysis("videos/GOPR0008.MP4", y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params, viz, x_offset, param_str=param_str)
+    ta.run()
 
-    # auto run
-    vid_names = glob.glob(os.getcwd() + "/videos/*.MP4")
+    # # auto run
+    # vid_names = glob.glob(os.getcwd() + "/videos/*.MP4")
 
-    for fn in vid_names:
-        ta = TorpedoAnalysis(fn, y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params, param_str=param_str)
-        ta.run()
+    # for fn in vid_names:
+    #     ta = TorpedoAnalysis(fn, y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params, viz, x_offset, param_str=param_str)
+    #     ta.run()
 
