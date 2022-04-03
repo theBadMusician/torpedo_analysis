@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import cv2 as cv
 import glob
@@ -9,7 +9,7 @@ import os
 from FeatureDetection import ImageFeatureProcessing
 
 class TorpedoAnalysis:
-    def __init__(self, video_fn, y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params):
+    def __init__(self, video_fn, y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params, param_str=""):
         self.video_fn = video_fn
         self.vidcap = cv.VideoCapture(self.video_fn)
         self.total_frames = self.vidcap.get(7)
@@ -29,6 +29,7 @@ class TorpedoAnalysis:
         self.hsv_params = hsv_params
         self.morphism_params = morphism_params
         self.bgr_params = bgr_params
+        self.param_str = param_str
 
     def __del__(self):
         self.vidcap.release()
@@ -121,13 +122,15 @@ class TorpedoAnalysis:
 
             morph_img = self.feature_detection.noise_removal_processor(gray, *self.morphism_params)
 
+            # DETECTION
             fixed_y_coord = orig_frame.shape[0] - self.y_coord         
             crop = morph_img[fixed_y_coord:fixed_y_coord+1, 0:0+orig_frame.shape[1]]
             if crop.sum() > 0:
                 # Save image
                 detection = True
                 det_name = self.video_fn[:len(self.video_fn) - 4]
-                det_name = f"{det_name}.png"
+
+                det_name_png = f"{det_name}.png"
                 det_frame = orig_frame
                 
                 torpedo_pxels = np.nonzero(crop)[1]
@@ -137,7 +140,16 @@ class TorpedoAnalysis:
 
                 cv.circle(det_frame, (torpedo_mean, fixed_y_coord), 3, (255, 255, 255), 3)
                 cv.putText(det_frame, str(self.point_offset), (torpedo_mean, fixed_y_coord), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv.imwrite(det_name, orig_frame)
+                y0, dy = 25, 30
+                for i, line in enumerate(self.param_str.split('\n')):
+                    y = y0 + i*dy
+                    cv.putText(det_frame, line, (0, y), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv.imwrite(det_name_png, orig_frame)
+
+                with open(det_name + ".txt", 'w') as file:
+                    file.write(str(self.param_str) + str("\n"))
+                    file.write(str(torpedo_mean) + str("\n"))
+                    file.write(str(self.point_offset) + str("\n"))
 
                 break
 
@@ -164,22 +176,29 @@ if __name__ == "__main__":
     x_spacing = 70
 
     # Video params
-    frames_to_hop = 10
+    frames_to_hop = 60
 
     # Detection params
     hsv_params = (0, 200, 200, 255, 120, 255)
     morphism_params = (9, 9, 5.0, 21, 2, 2, 4, 7)
     bgr_params = ((0,0,0), (50, 255, 255))
 
+    # Param str
+    param_str = f"Hor-line Y-coord: {y_coord}\n" \
+                f"Ver-line X-spacing: {x_spacing}\n" \
+                f"Frames hop: {frames_to_hop}\n" \
+                f"HSV params: {hsv_params}\n" \
+                f"Morphism params: {morphism_params}\n" \
+                f"BGR filter params: {bgr_params}\n"
 
     # # example run
-    # ta = TorpedoAnalysis("videos/RUN006.MP4", y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params)
+    # ta = TorpedoAnalysis("videos/RUN006.MP4", y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params, param_str=param_str)
     # ta.run()
 
     # auto run
     vid_names = glob.glob(os.getcwd() + "/videos/*.MP4")
 
     for fn in vid_names:
-        ta = TorpedoAnalysis(fn, y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params)
+        ta = TorpedoAnalysis(fn, y_coord, x_spacing, frames_to_hop, hsv_params, morphism_params, bgr_params, param_str=param_str)
         ta.run()
 

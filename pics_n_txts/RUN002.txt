@@ -1,0 +1,9 @@
+Hor-line Y-coord: 315
+Ver-line X-spacing: 70
+Frames hop: 60
+HSV params: (0, 200, 200, 255, 120, 255)
+Morphism params: (9, 9, 5.0, 21, 2, 2, 4, 7)
+BGR filter params: ((0, 0, 0), (50, 255, 255))
+
+1516
+7.94
